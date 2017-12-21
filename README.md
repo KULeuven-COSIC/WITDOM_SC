@@ -36,7 +36,7 @@ Configure for the Number of parties involved in the computation. (As many as nee
 ### 1. Getting Started
 Open the file gmdh.mpc, go to the main part of the file and change the parameters i.e. number of inputs for training and testing respectively. 
 Save the file and compile it following the instructions detailed on the SPDZ-2 repository. <br />
-Add secret inputs normalized (values between 0 and 1) with a precision of 6 decimals. Inputs can be introduced by following the instructions on the SPDZ-2 repository and Google group  <link>hhttps://groups.google.com/forum/#!forum/spdz<link/>. <br />
+Add secret inputs normalized (values between 0 and 1) with a precision of 6 decimals. Inputs can be introduced by following the instructions on the SPDZ-2 repository and Google group  <link>https://groups.google.com/forum/#!forum/spdz<link/>. <br />
 Run the file and compile it following the instructions detailed on the SPDZ-2 repository. <br />
 
 ### 3. Licensing
