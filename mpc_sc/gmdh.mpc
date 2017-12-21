@@ -1,0 +1,375 @@
+# (C) 2016 University of Bristol. See License.txt
+#import numpy 
+#from math import len
+import time
+import sys 
+sys.setrecursionlimit(1000000)
+import random
+program.bit_length = 214
+print "program.bit_length: ", program.bit_length
+program.security = 40
+
+n = 100
+m = 32
+n_eval=100
+error_column=2
+#custom functions:
+
+##matrix minor
+def matrix_minor(M,i,j):
+    local_X=Matrix(M.rows-1,M.columns-1,sfix)
+    r=MemValue(0)
+    @for_range(M.rows)
+    def f(k):
+    #for k in range(M.rows):
+        @if_(k!=i)
+        def f():
+        #if(k!=i):
+            t=MemValue(0)
+            @for_range(M.columns)
+            def f(v):
+            #for v in range(M.columns):
+                @if_(v!=j)
+                def f():
+                #if(v!=j):
+                  # print_ln('r: %s, t: %s, k: %s, v: %s',r,t,k,v) 
+                   local_X[r][t]=M[k][v]
+                   t.iadd(1)
+            r.iadd(1)
+    return local_X
+
+##matrix determinant
+def matrix_deternminant(M):
+    #base case for 2x2 matrix
+    if( M.rows == 2):
+        return M[0][0]*M[1][1]-M[0][1]*M[1][0]
+
+    determinant = MemFix(sfix(0))
+    sign=MemValue(cint(-1))
+    @for_range(M.rows)
+    def f(c):
+    #for c in range(M.rows):
+        local_sign=(-1)*sign.read()
+        sign.write(local_sign)
+        determinant.write( determinant.read()+  local_sign*M[0][c]*matrix_deternminant(matrix_minor(M,0,c)))
+    return determinant.read()
+
+
+##matrix multiplication:
+def matrix_multiplication(X,Y):
+    local_X= Matrix(X.rows, Y.columns, sfix)
+    @for_range(len(X))
+    def f(i):
+    #for i in range(len(X)):
+       # iterate through columns of Y
+       @for_range(len(Y[0]))
+       def f(j):
+       #for j in range(len(Y[0])):
+           # iterate through rows of Y
+           @for_range(len(Y))
+           def f(k):
+           #for k in range(len(Y)):
+               local_X
+               local_X[i][j] += X[i][k] * Y[k][j]
+    #print_ln('mult local_X: r: %s c: %s',local_X.rows,local_X.columns)
+    return local_X 
+
+##transponse
+def matrix_transponse(X):
+    local_X= Matrix(X.columns, X.rows, sfix)
+    @for_range(X.rows)
+    def f(i):
+    #for i in range(X.rows): 
+        @for_range(len(X[i]))
+        def f(j):
+        #for j in range(len(X[i])):
+	    local_X[j][i]=X[i][j]  
+    return local_X
+
+##inverse matrix
+def matrix_inverse(M):
+    determinant = matrix_deternminant(M)
+    print_ln('is determinant 0: %s', (determinant==0).reveal())
+    #special case for 2x2 matrix:
+    if M.rows == 2:
+        cofactors = Matrix(2,2,sfix)
+        cofactors[0][0]=M[1][1]/determinant
+        cofactors[0][1]=-1*M[0][1]/determinant
+        cofactors[1][0]=-1*M[1][0]/determinant
+        cofactors[1][1]= M[0][0]/determinant
+        return cofactors
+
+    #find matrix of cofactors
+    C = Matrix(M.rows,M.columns,sfix)
+    sign=MemValue(cint(-1))
+    @for_range(M.rows)
+    def f(r):
+    #for r in range(M.rows):
+        @for_range(M.rows)
+        def f(c):
+        #for c in range(M.rows):
+            local_sign=(-1)*sign.read()
+            sign.write(local_sign)
+            minor = matrix_minor(M,r,c)           
+            C[r][c]= local_sign * matrix_deternminant(minor)            
+    cofactors = matrix_transponse(C)
+
+    @for_range(cofactors.rows)
+    def f(r):
+    #for r in range(cofactors.rows):
+        @for_range(cofactors.columns)
+        def f(c):        
+        #for c in range(cofactors.columns):
+            cofactors[r][c] = cofactors[r][c]/determinant
+    return cofactors
+
+##Neuron Functionality:
+
+##sorting:
+def vector_exchange(A,B,c):
+    @for_range(len(A))
+    def f(i):
+        #for i in range(len(A)):
+        aux=A[i]
+        A[i]=(aux[i]-B[i])*c +aux[i]
+        B[i]=(B[i]-aux[i])*c +B[i]
+    return A,B
+
+def item_exchange(a,b,c):
+    aux=a
+    a_l=(b-aux)*c +aux
+    b_l=(aux-b)*c +b
+    return a_l,b_l
+
+def neuron_sort(layer,layer_pol,layer_X_reveal,layer_X_reveal_eval,error):
+    @for_range(len(layer)-1,0,-1)
+    def f(i):
+    #for i in range(len(layer)-1,0,-1):
+        c=sint(0)
+        c=layer[i][error]>layer[i-1][error]
+        print_ln('what the funk: %s', c.reveal())
+        @for_range(layer.columns)
+        def f(j):
+        #for j in range(layer.columns):
+            print_ln('before exchange and c: %s, %s, %s', layer[i][error].reveal(),layer[i-1][error].reveal(),c.reveal())
+            layer[i][j],layer[i-1][j]=item_exchange(layer[i][j],layer[i-1][j],c)
+            print_ln('AFTER exchange and c: %s, %s, %s', layer[i][j].reveal(), layer[i-1][j].reveal(), c.reveal())
+        
+        @for_range(layer_pol.columns)
+        def f(j):          
+        #for j in range(layer_pol.columns):
+            layer_pol[i][j],layer_pol[i-1][j]=item_exchange(layer_pol[i][j],layer_pol[i-1][j],c)
+
+        @for_range(layer_X_reveal.columns)
+        def f(j):
+        #for j in range(layer_X_reveal.rows):
+            layer_X_reveal[j][i], layer_X_reveal[j][i-1]=item_exchange(layer_X_reveal[j][i],layer_X_reveal[j][i-1],c)
+            layer_X_reveal_eval[j][i], layer_X_reveal_eval[j][i-1]=item_exchange(layer_X_reveal_eval[j][i],layer_X_reveal_eval[j][i-1],c)
+    return layer,layer_pol,layer_X_reveal,layer_X_reveal_eval
+
+
+###layer_construct
+##eval (testing data)
+def layer_construct(X_reveal,X_reveal_eval, Y, Y_eval, nodes):
+    X = Matrix(len(X_reveal), 6, sfix)
+    X_eval = Matrix(len(X_reveal_eval), 6, sfix)
+    layer_local = Matrix(nodes+1,3,sfix)
+    layer_pol_local = Matrix(nodes+1,6,sfix)
+    layer_X_reveal_local=Matrix(len(X_reveal),nodes+1,sfix)
+    layer_X_reveal_eval_local=Matrix(len(X_reveal_eval),nodes+1,sfix)
+    counter= MemValue(int(0))
+    @for_range(nodes)
+    def f(i):
+    #for i in range (nodes+1):
+            layer_local[i][error_column]=sfix(100000000000000000000.0)
+            print_ln('this is it, the with layer_local: %s',layer_local[i][error_column].reveal())
+    @for_range(len(X_reveal[0]))
+    def f(k):
+    #for k in range(len(X_reveal[0])):
+        @for_range(k+1,len(X_reveal[0]))
+        def f(h):
+            start = time.clock()
+        #for h in range(k+1,len(X_reveal[0])):
+            #individual combination gmdh matrix 
+            @for_range(len(X_reveal))
+            def g(d):
+            #for i in range(len(X_reveal)):
+                X[d][0] = sfix(1)
+                X[d][1] = X_reveal[d][k]
+                X[d][2] = X_reveal[d][h]
+                X[d][3] = X_reveal[d][k]*X_reveal[d][h]
+                X[d][4] = X_reveal[d][k]*X_reveal[d][k]
+                X[d][5] = X_reveal[d][h]*X_reveal[d][h]
+            @for_range(len(X_reveal_eval))
+            def f(i):
+            #for i in range(len(X_reveal_eval)):
+                X_eval[i][0] = sfix(1)
+                X_eval[i][1] = X_reveal_eval[i][k]
+                X_eval[i][2] = X_reveal_eval[i][h]
+                X_eval[i][3] = X_reveal_eval[i][k]*X_reveal_eval[i][h]
+                X_eval[i][4] = X_reveal_eval[i][k]*X_reveal_eval[i][k]
+                X_eval[i][5] = X_reveal_eval[i][h]*X_reveal_eval[i][h]
+            X_t=matrix_transponse(X)
+            X_t_X=matrix_multiplication(X_t,X)
+            
+            #adding noise for arithmetic stability
+            alpha= sfix(10^(-5))
+
+            @for_range(len(X_t_X))
+            def f(i):
+            #for i in range(len(X_t_X)):
+                X_t_X[i][i]=X_t_X[i][i]+alpha
+            #GMDH equation
+            Z=matrix_multiplication(matrix_multiplication(matrix_inverse(X_t_X),X_t),Y)
+            X_reveal_next=matrix_multiplication(X,Z) 
+            Z_eval=matrix_multiplication(X_eval,Z)      
+            Z_sqr = MemFix(sfix(0))
+            
+            @for_range(len(X_reveal_eval))
+            def f(i):
+            #for i in range(len(X_reveal_eval)):
+                Z_sqr.write( Z_sqr.read()+ ((Z_eval[i][0]-Y_eval[i][0])*(Z_eval[i][0]-Y_eval[i][0])))
+            Z_sqr=Z_sqr.read()/len(X_reveal_eval)
+        
+            #setting neuron parameters
+            print_ln('Freaking k and h: %s %s',k,h)
+            layer_local[nodes][0]=sfix(k)
+            layer_local[nodes][1]=sfix(h)
+            layer_local[nodes][2]=Z_sqr
+            #setting polynomial
+            @for_range(layer_pol_local.columns)
+            def f(u):
+            #for u in range(layer_pol.columns):
+                layer_pol_local[nodes][u]= Z[u][0]
+
+            @for_range(len(layer_X_reveal_local))
+            def f(u):
+            #for u in range(len(X_reveal)):
+                layer_X_reveal_local[u][nodes]=X_reveal_next[u][0]
+
+            @for_range(len(layer_X_reveal_eval_local))
+            def f(u):
+            #for u in range(len(X_reveal_eval)):
+                layer_X_reveal_eval_local[u][nodes]=Z_eval[u][0]
+
+            z_error=error_column
+
+            print_ln('Layer before Sorting:')
+
+            for i in range(0,len(layer_local)):
+                for j in range(0, len(layer_local[0])):
+                    print_str(' %s ', layer_local[i][j].reveal())
+                for j in range(0,len(layer_pol_local[0])):
+                    print_str(' %s ', layer_pol_local[i][j].reveal())
+                print_ln(' ')
+
+            #layer_local,layer_pol_local,layer_X_reveal_local, layer_X_reveal_eval_local= 
+            neuron_sort(layer_local,layer_pol_local,layer_X_reveal_local,layer_X_reveal_eval_local, z_error)
+
+            print_ln('Layer AFTER Sorting!!:')
+            for i in range(0,len(layer_local)):
+                for j in range(0, len(layer_local[0])):
+                    print_str(' %s ', layer_local[i][j].reveal())
+                for j in range(0,len(layer_pol_local[0])):
+                    print_str(' %s ', layer_pol_local[i][j].reveal())
+                print_ln(' ')
+
+            counter.iadd(1)
+            print_ln('i: %s', counter.read())
+            end = time.clock()
+            print_ln('time: %s', end - start)
+    return layer_local, layer_pol_local,layer_X_reveal_local, layer_X_reveal_eval_local
+
+
+
+###########################3PROGRAM3###############################
+
+## array of fixed points
+# initialization of inputs in cleardata containers
+
+Y = Matrix(n,1, sfix)
+Y_eval=Matrix(n,1,sfix)
+X_reveal=Matrix(n,m,sfix) 
+X_reveal_eval=Matrix(n_eval,m,sfix)
+#secret sharing of inputs
+#training data
+@for_range(n)
+def f(i):
+#for i in range(n):
+    @for_range(m+1)
+    def f(j):
+    #for j in range(m+1):
+        @if_(j!=32)
+        def f():
+            X_reveal[i][j]=sfix(sint.get_raw_input_from(0))/(pow(10.0,5))
+        @if_(j==32)
+        def f():
+            Y[i][0]=sfix(sint.get_raw_input_from(0)) 
+            
+#test data
+@for_range(n)
+def f(i):
+#for i in range(n):
+    @for_range(m+1)
+    def f(j):
+    #for j in range(m+1):
+        @if_(j!=32)
+        def f():
+            X_reveal_eval[i][j]=sfix(sint.get_raw_input_from(0))/(10^5)
+        @if_(j==32)
+        def f():
+            Y_eval[i][0]=sfix(sint.get_raw_input_from(0)) 
+print_ln('New (+-256) Process Started:')
+##Begin Layer 1
+layer_1,layer_1_pol,X_reveal_layer_2,X_reveal_eval_layer_2=layer_construct(X_reveal,X_reveal_eval,Y,Y_eval,8)
+##End Layer 1
+print_ln('External layer done')
+## Begin Layer 2 (4 Neurons)
+layer_2,layer_2_pol, X_reveal_layer_3, X_reveal_eval_layer_3=layer_construct(X_reveal_layer_2,X_reveal_eval_layer_2,Y,Y_eval,4)
+#End Layer 2 (4 Neurons)
+print_ln('4 Neurons layer done')
+## Begin Layer 2 (2 Neurons)
+layer_3,layer_3_pol, X_reveal_layer_4, X_reveal_eval_layer_4=layer_construct(X_reveal_layer_3,X_reveal_eval_layer_3,Y,Y_eval,2)
+#End Layer 2 (2 Neurons)
+print_ln('External2 neurons layer done')
+## Begin Layer 2 (1 Neurons)
+layer_4,layer_4_pol, X_reveal_layer_5, X_reveal_eval_layer_5=layer_construct(X_reveal_layer_4,X_reveal_eval_layer_4,Y,Y_eval,1)
+#End Layer 2 (1 Neurons)
+print_ln(' done!')
+
+print_ln('Layer 1:')
+
+for i in range(0,len(layer_1)):
+    for j in range(0, len(layer_1[0])):
+        print_str(' %s ', layer_1[i][j].reveal())
+    for j in range(0,len(layer_1_pol[0])):
+        print_str(' %s ', layer_1_pol[i][j].reveal())
+    print_ln(' ')
+
+print_ln('Layer 2:')
+
+for i in range(0,len(layer_2)):
+    for j in range(0, len(layer_2[0])):
+        print_str(' %s ', layer_2[i][j].reveal())
+    for j in range(0,len(layer_2_pol[0])):
+        print_str(' %s ', layer_2_pol[i][j].reveal())
+    print_ln(' ')
+
+print_ln('Layer 3:')
+
+for i in range(0,len(layer_3)):
+    for j in range(0, len(layer_3[0])):
+        print_str(' %s ', layer_3[i][j].reveal())
+    for j in range(0,len(layer_3_pol[0])):
+        print_str(' %s ', layer_3_pol[i][j].reveal())
+    print_ln(' ')
+
+print_ln('Layer 4:')
+
+for i in range(0,len(layer_4)):
+    for j in range(0, len(layer_4[0])):
+        print_str(' %s ', layer_4[i][j].reveal())
+    for j in range(0,len(layer_4_pol[0])):
+        print_str(' %s ', layer_4_pol[i][j].reveal())
+    print_ln(' ')
+print_ln('Process Finished!')
